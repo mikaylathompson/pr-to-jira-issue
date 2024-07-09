@@ -1,16 +1,18 @@
 const JIRA_ISSUE_LINK_CLASS = "create-jira-issue-link";
 
+function issueLinkAlreadyPresent(commentGroup) {
+  return (commentGroup.querySelector(`.${JIRA_ISSUE_LINK_CLASS}`) !== null)
+}
 
 function runContent() {
-  if (document.querySelector(`.${JIRA_ISSUE_LINK_CLASS}`) !== null) {
-    return;
-  }
+  console.log("Running content.js");
 
-  const commentSelectors = '.js-comments-holder';
-
-  document.querySelectorAll(commentSelectors).forEach(addButton);
+  document.querySelectorAll('.js-comments-holder').forEach(addButton);
 
   function addButton(commentGroup) {
+    if (issueLinkAlreadyPresent(commentGroup)) {
+      return;
+    }
     const comment = commentGroup.lastElementChild;
     const plural = commentGroup.children.length > 1;
 
@@ -45,16 +47,22 @@ function runContent() {
     modal.showModal()
     
     closeButton = document.getElementById("jira-modal-close");
-    closeButton.addEventListener("click", () => modal.close());
+    closeButton.addEventListener("click", () => {
+      document.getElementById('jira-modal').close();
+      document.getElementById('jira-modal').remove();
+    });
 
-    document.getElementById('jira-form').onsubmit = (e) => {
+    // I'm querying from within the modal object because there's the possibility of
+    // having closed but not deleted a different modal object, and that would cause
+    // unexpected values to be submitted.
+    modal.querySelector("#jira-form").onsubmit = (e) => {
       e.preventDefault();
       console.log("Attempting to create JIRA task")
 
-      const title = document.getElementById('title').value;
+      const title = modal.querySelector("#title").value;
       console.log("Title = " + title);
       
-      const description = document.getElementById('description').value;
+      const description = modal.querySelector("#description").value;
 
       browser.runtime.sendMessage({
         action: 'createJiraTask',
@@ -71,6 +79,33 @@ function runContent() {
       modal.close();
     };
   }
+
+  // This is github specific stuff because they don't do a full DOM reload when switching tabs.
+  // Set up mutation observer for changes to the `turbo-frame` element, and then rerun content script
+  // if the `complete` attribute is set.
+  const observer = new MutationObserver((mutationList, records) => {
+      var rerunContent = false;
+      mutationList.forEach((mutationRecord) => {
+        // I'm specifically looking for a mutation to the complete atttribute that makes it non-null.
+        if (mutationRecord.type != "attributes") {
+          return;
+        }
+        if (mutationRecord.attributeName != "complete") {
+          return;
+        }
+        if (mutationRecord.target.getAttribute(mutationRecord.attributeName) === null) {
+          return;
+        }
+        console.log("Found a mutation that necessitates a reload.");
+        rerunContent = true;
+      })
+
+      if (rerunContent) {
+        runContent()
+      }
+    });
+  const turbo = document.querySelector("turbo-frame");
+  observer.observe(turbo, { attributes: true, childList: false, subtree: false });
 }
 
 
