@@ -39,3 +39,4 @@ web-ext run
 - Ideally, things like the project key and atlassian instance can be configured for specific Github repos, or at least adjusted in the create issue modal.
 - Perhaps it should also be configurable to only add the link in certain github repos. This is definitely doable via the extension permissions, but it's a pain becuase (I think) I need very broad permissions to be able to write the settings to local storage from the extension page.
 - Ideally, I'd add the "create issue" link to the little menu on the comment, but that seemed execessively complicated for a first pass.
+- I had to request super broad permissions in order to set options on the `about:addons` page. This isn't ideal.
